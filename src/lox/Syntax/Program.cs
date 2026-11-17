@@ -1,4 +1,4 @@
-namespace Lox;
+namespace Lox.Syntax;
 
 public sealed record Program(IReadOnlyList<Stmt> Declarations)
 {

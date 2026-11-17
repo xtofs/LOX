@@ -3,8 +3,9 @@ namespace Lox;
 using System.Linq;
 
 using Lox.Runtime;
+using Lox.Syntax;
 
-public class Interpreter(Logger logger, int[] lineIndex, string sourcePath)
+public class Interpreter(Logger logger, string sourcePath, int[] lineIndex)
 {
     private readonly Logger _logger = logger;
     private readonly int[] _lineIndex = lineIndex;

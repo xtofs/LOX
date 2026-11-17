@@ -1,8 +1,8 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 
 using Lox;
 using Lox.Parsing;
+using Lox.Syntax;
 
 using Microsoft.Extensions.Logging;
 
@@ -26,12 +26,12 @@ internal partial class Program
         }
 
         var logger = new Logger(LogLevel.Information);
-        var interpreter = new Interpreter(logger, lineIndex, options.FileName);
+        var interpreter = new Interpreter(logger, options.FileName, lineIndex);
         interpreter.Eval(program);
         return 0;
     }
 
-    private static void ShowSyntax(Lox.Program program, int[] lineIndex, string fileName)
+    private static void ShowSyntax(Lox.Syntax.Program program, int[] lineIndex, string fileName)
     {
         Console.WriteLine(AstFormatter.Format(program));
     }

@@ -1,4 +1,4 @@
-namespace Lox;
+namespace Lox.Syntax;
 
 /// <summary>
 /// Lowers the concrete syntax tree produced by <see cref="LoxGrammar"/> into the

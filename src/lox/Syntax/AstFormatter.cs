@@ -1,7 +1,7 @@
-using System.Collections;
+namespace Lox.Syntax;
+
 using System.Text;
 
-namespace Lox;
 
 
 public static class AstFormatter

@@ -1,6 +1,8 @@
+namespace Lox.Parsing;
+
 using System.Diagnostics.CodeAnalysis;
 
-namespace Lox.Parsing;
+using Lox.Syntax;
 
 public class Parser
 {

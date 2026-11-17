@@ -1,4 +1,4 @@
-namespace Lox;
+namespace Lox.Syntax;
 
 /// <summary>
 /// The abstract syntax tree: typed records with role-named properties, produced

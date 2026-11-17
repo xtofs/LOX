@@ -1,8 +1,6 @@
 namespace Lox.Runtime;
 
-using System.Diagnostics;
-
-using Lox.Runtime;
+using Lox.Syntax;
 
 public class Function : ICallable
 {
