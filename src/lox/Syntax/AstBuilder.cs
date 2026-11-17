@@ -110,15 +110,6 @@ public class AstBuilder
         };
     }
 
-    private static (int Line, int Column) GetPosition(int[] lineIndex, int start)
-    {
-        var ix = lineIndex.BinarySearch(start);
-        if (ix < 0) { ix = ~ix; }
-        var line = ix + 1;
-        var column = ix == 0 ? start + 1 : start - lineIndex[ix - 1];
-        return (line, column);
-    }
-
     // (for "for" ( varDecl|exprStmt|";"  cond? ;  incr? ) body)
     private Stmt.For ToFor(IReadOnlyList<Node> c)
     {

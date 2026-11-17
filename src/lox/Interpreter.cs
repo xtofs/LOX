@@ -32,17 +32,8 @@ public class Interpreter(Logger logger, string sourcePath, int[] lineIndex)
         }
     }
 
-    string GetPosition(Expr expr) => GetPosition(expr.Start);
-
-    string GetPosition(int start)
-    {
-        var ix = _lineIndex.BinarySearch(start);
-        if (ix < 0) { ix = ~ix; }
-        var line = ix + 1;
-        var column = ix == 0 ? start + 1 : start - _lineIndex[ix - 1];
-        return $"{_sourcePath}({line}, {column})";
-    }
-
+    private (int Line, int Column) GetPosition(Expr expr) =>
+        Scanner.GetPosition(expr.Start, _lineIndex);
 
     internal void EvalStmt(Stmt decl, Environment env)
     {

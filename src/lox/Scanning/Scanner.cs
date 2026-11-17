@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 namespace Lox;
@@ -7,6 +8,7 @@ public partial class Scanner(string source)
     private readonly string _source = source;
 
     private readonly List<int> _lineIndex = [0];
+
 
     public TokenEnumerator GetEnumerator()
     {
@@ -19,11 +21,26 @@ public partial class Scanner(string source)
         return _source.Substring(token.Start, token.Length);
     }
 
-    public void Deconstruct(Token<TokenKind> token, out TokenKind kind, out string value, out (int line, int column) position)
+
+    public static (int Line, int Column) GetPosition(int start, List<int> lineIndex)
+    {
+        return GetPosition(start, CollectionsMarshal.AsSpan(lineIndex));
+    }
+
+    public static (int Line, int Column) GetPosition(int start, ReadOnlySpan<int> lineIndex)
+    {
+        var ix = lineIndex.BinarySearch(start);
+        if (ix < 0) { ix = ~ix; }
+        var line = ix;
+        var column = ix == 0 ? start + 1 : start - lineIndex[ix - 1];
+        return (line, column);
+    }
+
+    public void GetKindValuePosition(Token<TokenKind> token, out TokenKind kind, out string value, out (int Line, int Column) position)
     {
         kind = token.Kind;
-        value = GetValue(token);
-        position = token.GetPosition(_lineIndex);
+        value = token.GetValue(_source);
+        position = Scanner.GetPosition(token.Start, _lineIndex);
     }
 
 

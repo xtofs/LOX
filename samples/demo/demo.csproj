@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\src\lox\lox.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="3.0.0" />
+  </ItemGroup>
+
 </Project>

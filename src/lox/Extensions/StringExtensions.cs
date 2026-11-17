@@ -4,13 +4,14 @@ public static class StringExtensions
 {
     extension(string value)
     {
-        public string ReplaceControlCharacters()
+        public string ReplaceControlCharacters(bool includeSpace = false)
         {
             return string.Create(value.Length, value, (span, value) =>
             {
+                var threshold = includeSpace ? 32 : 31;
                 for (int i = 0; i < value.Length; i++)
                 {
-                    span[i] = value[i] <= 32 ? (char)(value[i] + 0x2400) : value[i];
+                    span[i] = value[i] <= threshold ? (char)(value[i] + 0x2400) : value[i];
                 }
             });
         }
