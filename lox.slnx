@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/lox/lox.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/demo/demo.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/lox.Tests/lox.Tests.csproj" />
+  </Folder>
+</Solution>
