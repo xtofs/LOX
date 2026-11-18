@@ -78,14 +78,12 @@ public class AstBuilder
             {
                 TokenKind.NUMBER => new Expr.Literal(double.Parse(token.Value, System.Globalization.CultureInfo.InvariantCulture)) { Start = token.Start },
                 TokenKind.STRING => new Expr.Literal(token.Value[1..^1]) { Start = token.Start },
-                TokenKind.IDENTIFIER => token.Value switch
-                {
-                    "true" => new Expr.Literal(true) { Start = token.Start },
-                    "false" => new Expr.Literal(false) { Start = token.Start },
-                    "nil" => new Expr.Literal(null) { Start = token.Start },
-                    "this" => new Expr.This() { Start = token.Start },
-                    _ => new Expr.Variable(token.Value) { Start = token.Start },
-                },
+                TokenKind.TRUE => new Expr.Literal(true) { Start = token.Start },
+                TokenKind.FALSE => new Expr.Literal(false) { Start = token.Start },
+                TokenKind.NIL => new Expr.Literal(null) { Start = token.Start },
+                TokenKind.THIS => new Expr.This() { Start = token.Start },
+                TokenKind.IDENTIFIER => new Expr.Variable(token.Value) { Start = token.Start },
+
                 _ => throw new InvalidOperationException($"unexpected token {token.Kind} '{token.Value}' in expression"),
             };
         }
