@@ -5,10 +5,14 @@ namespace Lox.Scanning;
 public enum TokenKind
 {
     // Single-character tokens.
+    //  bracket tokens
     LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
-    COMMA, DOT, MINUS, PLUS, SEMICOLON, SLASH, STAR,
+    //  punctuation tokens
+    COMMA, DOT, SEMICOLON, COLON,
+    //  operator tokens
+    MINUS, PLUS, SLASH, STAR, BACKSLASH,
 
-    // One or two character tokens.
+    // One or two character comparison tokens. /[<>=!]=?/
     BANG, BANG_EQUAL,
     EQUAL, EQUAL_EQUAL,
     GREATER, GREATER_EQUAL,
@@ -21,7 +25,7 @@ public enum TokenKind
     AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
     PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE,
 
-    EOF
+    EOF,
 }
 
 public enum TokenCategory

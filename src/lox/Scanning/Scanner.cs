@@ -49,20 +49,19 @@ public partial class Scanner(string source)
 
     /* lang=regex */
     const string Pattern = """
-    \G(
-          (?'Whitespace'\s+)
-        | (?'Comment'//.*)
-        | (?'Number'\d+(\.\d+)?)
-        | (?'Identifier'[a-zA-Z_]\w*)
-        | (?'Comparison'[<>=!]=?)
-        | (?'Operator'[+\-*/])
-        | (?'Bracket'[{}[\]<>()])
-        | (?'Punctuation'[;,.])
-        | (?'QuotedString'"[^"]*")
+    \G( (?'Whitespace'\s+)
+      | (?'Comment'//.*)
+      | (?'Number'\d+(\.\d+)?)
+      | (?'Identifier'[a-zA-Z_]\w*)
+      | (?'Comparison'[<>=!]=?)
+      | (?'Operator'[+\-*/])
+      | (?'Bracket'[{}[\]()])
+      | (?'Punctuation'[;,.:])
+      | (?'QuotedString'"[^"]*")
     )
     """;
 
-    [GeneratedRegex(Pattern, RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(Pattern, RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture | RegexOptions.ECMAScript)]
     static partial Regex MyRegex { get; }
 
     public int[] LineIndex => [.. _lineIndex];
@@ -98,10 +97,11 @@ public ref struct TokenEnumerator(ContiguousMatchEnumerator<TokenCategory> conti
             {
                 "=" => TokenKind.EQUAL,
                 "!" => TokenKind.BANG,
-                ">=" => TokenKind.GREATER_EQUAL,
                 ">" => TokenKind.GREATER,
-                "<=" => TokenKind.LESS_EQUAL,
                 "<" => TokenKind.LESS,
+
+                ">=" => TokenKind.GREATER_EQUAL,
+                "<=" => TokenKind.LESS_EQUAL,
                 "==" => TokenKind.EQUAL_EQUAL,
                 "!=" => TokenKind.BANG_EQUAL,
                 _ => throw new ArgumentException($"Unknown comparison operator: {value}")
@@ -112,6 +112,7 @@ public ref struct TokenEnumerator(ContiguousMatchEnumerator<TokenCategory> conti
                 "-" => TokenKind.MINUS,
                 "*" => TokenKind.STAR,
                 "/" => TokenKind.SLASH,
+                "\\" => TokenKind.BACKSLASH,
                 _ => throw new ArgumentException($"Unknown operator: {value}")
             },
             TokenCategory.Bracket => value switch
@@ -126,8 +127,9 @@ public ref struct TokenEnumerator(ContiguousMatchEnumerator<TokenCategory> conti
             },
             TokenCategory.Punctuation => value switch
             {
-                ";" => TokenKind.SEMICOLON,
                 "," => TokenKind.COMMA,
+                ";" => TokenKind.SEMICOLON,
+                ":" => TokenKind.COLON,
                 "." => TokenKind.DOT,
                 _ => throw new ArgumentException($"Unknown punctuation: {value}")
             },
