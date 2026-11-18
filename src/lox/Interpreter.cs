@@ -3,6 +3,7 @@ namespace Lox;
 using System.Linq;
 
 using Lox.Runtime;
+using Lox.Scanning;
 using Lox.Syntax;
 
 public class Interpreter(Logger logger, string sourcePath, int[] lineIndex)

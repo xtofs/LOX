@@ -1,5 +1,7 @@
 namespace Lox;
 
+using Lox.Scanning;
+
 public closed record Node(string Tag)
 {
     /// <summary>Result of an Opt rule whose inner rule didn't match.</summary>

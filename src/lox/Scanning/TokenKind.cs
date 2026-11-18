@@ -1,9 +1,35 @@
-namespace Lox;
+namespace Lox.Scanning;
+
 
 public enum TokenKind
 {
-    EndOfInput,
+    // Single-character tokens.
+    LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
+    COMMA, DOT, MINUS, PLUS, SEMICOLON, SLASH, STAR,
+
+    // One or two character tokens.
+    BANG, BANG_EQUAL,
+    EQUAL, EQUAL_EQUAL,
+    GREATER, GREATER_EQUAL,
+    LESS, LESS_EQUAL,
+
+    // Literals.
+    IDENTIFIER, STRING, NUMBER,
+
+    // Keywords.
+    AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
+    PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE,
+
+    EOF
+}
+
+public enum TokenCategory
+{
+    EndOfInput, // has to be the first category to correctly identify end of input
+
     Whitespace,
+    Comment,
+
     Number,
     Identifier,
     Comparison,
@@ -12,6 +38,20 @@ public enum TokenKind
     Punctuation,
     QuotedString
 }
+
+// public enum TokenCategory
+// {
+//     EndOfInput,
+//     Whitespace,
+//     Comment,
+//     Number,
+//     Identifier,
+//     Comparison,
+//     Operator,
+//     Bracket,
+//     Punctuation,
+//     QuotedString
+// }
 
 public static class TokenKindExtensions
 {

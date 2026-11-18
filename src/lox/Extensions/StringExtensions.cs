@@ -18,4 +18,9 @@ public static class StringExtensions
 
         public string Quoted(string suffix = "") => @$"""{value.ReplaceControlCharacters()}""{suffix}";
     }
+
+    public static string StripPrefix(this string str, string prefix)
+    {
+        return str.StartsWith(prefix) ? str[prefix.Length..] : str;
+    }
 }

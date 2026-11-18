@@ -1,7 +1,10 @@
+namespace Lox.Scanning;
+
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
-namespace Lox;
+using Lox.Scanning;
+
 
 public partial class Scanner(string source)
 {
@@ -12,7 +15,7 @@ public partial class Scanner(string source)
 
     public TokenEnumerator GetEnumerator()
     {
-        var inner = MyRegex.ContiguousMatch<TokenKind>(_source, i => _lineIndex.Add(i));
+        var inner = MyRegex.ContiguousMatch<TokenCategory>(_source, i => _lineIndex.Add(i));
         return new TokenEnumerator(inner);
     }
 
@@ -48,7 +51,8 @@ public partial class Scanner(string source)
     const string Pattern = """
     \G(
           (?'Whitespace'\s+)
-        | (?'Number'\d+)
+        | (?'Comment'//.*)
+        | (?'Number'\d+(\.\d+)?)
         | (?'Identifier'[a-zA-Z_]\w*)
         | (?'Comparison'[<>=!]=?)
         | (?'Operator'[+\-*/])
@@ -64,10 +68,9 @@ public partial class Scanner(string source)
     public int[] LineIndex => [.. _lineIndex];
 }
 
-
-public ref struct TokenEnumerator(ContiguousMatchEnumerator<TokenKind> contiguousMatchEnumerator)
+public ref struct TokenEnumerator(ContiguousMatchEnumerator<TokenCategory> contiguousMatchEnumerator)
 {
-    private ContiguousMatchEnumerator<TokenKind> _contiguousMatchEnumerator = contiguousMatchEnumerator;
+    private ContiguousMatchEnumerator<TokenCategory> _contiguousMatchEnumerator = contiguousMatchEnumerator;
     private int _triviaStart;
     private int _triviaLength;
 
@@ -79,13 +82,88 @@ public ref struct TokenEnumerator(ContiguousMatchEnumerator<TokenKind> contiguou
             var success = _contiguousMatchEnumerator.MoveNext();
             if (!success) { return false; }
             if (triviaStart < 0) { triviaStart = _contiguousMatchEnumerator.Current.Start; }
-        } while (_contiguousMatchEnumerator.Current.Kind == TokenKind.Whitespace);
+        } while (_contiguousMatchEnumerator.Current.Kind is TokenCategory.Whitespace or TokenCategory.Comment);
         _triviaStart = triviaStart;
         _triviaLength = _contiguousMatchEnumerator.Current.Start - triviaStart;
         return true;
     }
 
-    public readonly Token<TokenKind> Current => _contiguousMatchEnumerator.Current;
+    private static TokenKind GetTokenKind(TokenCategory category, System.ReadOnlySpan<char> value)
+    {
+        return category switch
+        {
+            TokenCategory.Comparison => value switch
+            {
+                ">=" => TokenKind.GREATER_EQUAL,
+                ">" => TokenKind.GREATER,
+                "<=" => TokenKind.LESS_EQUAL,
+                "<" => TokenKind.LESS,
+                "==" => TokenKind.EQUAL_EQUAL,
+                "!=" => TokenKind.BANG_EQUAL,
+                _ => throw new ArgumentException($"Unknown comparison operator: {value}")
+            },
+            TokenCategory.Operator => value switch
+            {
+                "+" => TokenKind.PLUS,
+                "-" => TokenKind.MINUS,
+                "*" => TokenKind.STAR,
+                "/" => TokenKind.SLASH,
+                _ => throw new ArgumentException($"Unknown operator: {value}")
+            },
+            TokenCategory.Bracket => value switch
+            {
+                "(" => TokenKind.LEFT_PAREN,
+                ")" => TokenKind.RIGHT_PAREN,
+                "{" => TokenKind.LEFT_BRACE,
+                "}" => TokenKind.RIGHT_BRACE,
+                "[" => TokenKind.LEFT_BRACE,
+                "]" => TokenKind.RIGHT_BRACE,
+                _ => throw new ArgumentException($"Unknown bracket: {value}")
+            },
+            TokenCategory.Punctuation => value switch
+            {
+                ";" => TokenKind.SEMICOLON,
+                "," => TokenKind.COMMA,
+                "." => TokenKind.DOT,
+                _ => throw new ArgumentException($"Unknown punctuation: {value}")
+            },
+            TokenCategory.Identifier => value switch
+            {
+                "and" => TokenKind.AND,
+                "class" => TokenKind.CLASS,
+                "else" => TokenKind.ELSE,
+                "false" => TokenKind.FALSE,
+                "for" => TokenKind.FOR,
+                "fun" => TokenKind.FUN,
+                "if" => TokenKind.IF,
+                "nil" => TokenKind.NIL,
+                "or" => TokenKind.OR,
+                "print" => TokenKind.PRINT,
+                "return" => TokenKind.RETURN,
+                "super" => TokenKind.SUPER,
+                "this" => TokenKind.THIS,
+                "true" => TokenKind.TRUE,
+                "var" => TokenKind.VAR,
+                "while" => TokenKind.WHILE,
+                _ => TokenKind.IDENTIFIER
+            },
+            TokenCategory.Number => TokenKind.NUMBER,
+            TokenCategory.EndOfInput => TokenKind.EOF,
+            TokenCategory.QuotedString => TokenKind.STRING,
+            _ => throw new ArgumentException($"Unknown token category: {category}")
+        };
+    }
+
+    public readonly Token<TokenKind> Current
+    {
+        get
+        {
+            var current = _contiguousMatchEnumerator.Current;
+            var value = _contiguousMatchEnumerator.Source.AsSpan(current.Start, current.Length);
+            var kind = GetTokenKind(current.Kind, value);
+            return new Token<TokenKind>(kind, current.Start, current.Length);
+        }
+    }
 
     /// <summary>The whitespace between the previous token and Current.</summary>
     internal readonly string GetLeadingTrivia()

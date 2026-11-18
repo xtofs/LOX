@@ -8,17 +8,17 @@
       "name": "demo scan",
       "type": "coreclr",
       "request": "launch",
-      "program": "${workspaceFolder}/samples/demo/bin/Debug/net11.0/demo.dll",
+      "program": "${workspaceFolder}/src/demo/bin/Debug/net11.0/demo.dll",
       "args": [
         "scan",
-        "example.lox",
+        "data/keywords.lox",
       ]
     },
     {
       "name": "demo parse",
       "type": "coreclr",
       "request": "launch",
-      "program": "${workspaceFolder}/samples/demo/bin/Debug/net11.0/demo.dll",
+      "program": "${workspaceFolder}/src/demo/bin/Debug/net11.0/demo.dll",
       "args": [
         "parse",
         "example.lox",
@@ -28,7 +28,7 @@
       "name": "demo run",
       "type": "coreclr",
       "request": "launch",
-      "program": "${workspaceFolder}/samples/demo/bin/Debug/net11.0/demo.dll",
+      "program": "${workspaceFolder}/src/demo/bin/Debug/net11.0/demo.dll",
       "args": [
         "run",
         "example.lox",

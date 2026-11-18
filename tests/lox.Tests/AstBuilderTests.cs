@@ -1,12 +1,17 @@
+using Lox;
+using Lox.Parsing;
+using Lox.Scanning;
+using Lox.Syntax;
+
 public class AstBuilderTests
 {
-    private static LoxProgram Parse(string source)
+    private static Program Parse(string source)
     {
         var scanner = new Scanner(source);
         var tokens = scanner.GetEnumerator();
         tokens.MoveNext();
         Assert.True(LoxGrammar.Program(tokens, out var cst, out _), $"failed to parse: {source}");
-        return AstBuilder.ToProgram(cst!);
+        return AstBuilder.ToProgram(cst!, scanner.LineIndex);
     }
 
     private static Stmt Single(string source) => Assert.Single(Parse(source).Declarations);
@@ -22,7 +27,7 @@ public class AstBuilderTests
     {
         var stmt = Assert.IsType<Stmt.ExprStmt>(Single("a.b;"));
         var get = Assert.IsType<Expr.GetProperty>(stmt.Expression);
-        Assert.Equal(new Expr.Variable("a"), get.Object);
+        Assert.Equal(new Expr.Variable("a") { Start = 0 }, get.Object);
         Assert.Equal("b", get.Name);
     }
 
@@ -31,9 +36,9 @@ public class AstBuilderTests
     {
         var stmt = Assert.IsType<Stmt.ExprStmt>(Single("a(b);"));
         var call = Assert.IsType<Expr.Call>(stmt.Expression);
-        Assert.Equal(new Expr.Variable("a"), call.Callee);
+        Assert.Equal(new Expr.Variable("a") { Start = 0 }, call.Callee);
         var arg = Assert.Single(call.Arguments);
-        Assert.Equal(new Expr.Variable("b"), arg);
+        Assert.Equal(new Expr.Variable("b") { Start = 2 }, arg);
     }
 
     [Fact]
@@ -128,7 +133,7 @@ public class AstBuilderTests
     public void Function_parameters_are_collected()
     {
         var fun = Assert.IsType<Stmt.FunDecl>(Single("fun f(a, b, c) { }"));
-        Assert.Equal(["a", "b", "c"], fun.Parameters);
+        Assert.Equal(["a", "b", "c"], fun.Parameters.Select(p => p.Name));
     }
 
     [Fact]

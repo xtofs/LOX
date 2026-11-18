@@ -16,11 +16,11 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
-    <Using Include="lox" />
+    <Using Include="Lox" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\lox\lox.csproj" />
+    <ProjectReference Include="..\..\src\Lox\lox.csproj" />
   </ItemGroup>
 
 </Project>

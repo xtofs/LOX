@@ -1,3 +1,7 @@
+using Lox;
+using Lox.Parsing;
+using Lox.Scanning;
+
 public class CstRoundTripTests
 {
     private static Node Parse(string source)

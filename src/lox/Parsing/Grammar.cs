@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Lox;
+using Lox.Scanning;
+
+namespace Lox.Parsing;
 
 public delegate bool GrammarRule(TokenEnumerator tokens, [MaybeNullWhen(false)] out Node result, out TokenEnumerator remaining);
 

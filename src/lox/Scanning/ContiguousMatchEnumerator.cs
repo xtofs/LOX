@@ -14,20 +14,14 @@ public static class RegexExtensions
     }
 }
 
-public ref struct ContiguousMatchEnumerator<TEnum>
+public ref struct ContiguousMatchEnumerator<TEnum>(Regex regex, string source, Action<int> action)
     where TEnum : struct
 {
-    public ContiguousMatchEnumerator(Regex regex, string source, Action<int> action)
-    {
-        Source = source;
-        _match = regex.Match(source);
-        _action = action;
-    }
-    private Match _match;
+    private Match _match = regex.Match(source);
 
-    private readonly Action<int> _action;
+    private readonly Action<int> _action = action;
 
-    public string Source { get; }
+    public string Source { get; } = source;
 
     public readonly ContiguousMatchEnumerator<TEnum> GetEnumerator() => this;
 
@@ -39,7 +33,10 @@ public ref struct ContiguousMatchEnumerator<TEnum>
     {
         if (!_match.Success)
         {
-            if (_isEndOfInput) return false; _isEndOfInput = true; Current = (default(TEnum), Source.Length, 0); return true;
+            if (_isEndOfInput) return false;
+            _isEndOfInput = true;
+            Current = (default(TEnum),
+            Source.Length, 0); return true;
         }
 
         var group = _match.Groups.Values.Skip(1).Single(g => g.Success)!;

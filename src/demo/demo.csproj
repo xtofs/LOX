@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\lox\lox.csproj" />
+    <ProjectReference Include="..\Lox\lox.csproj" />
   </ItemGroup>
 
   <ItemGroup>

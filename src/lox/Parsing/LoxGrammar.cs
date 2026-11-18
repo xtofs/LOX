@@ -1,4 +1,9 @@
-namespace Lox;
+namespace Lox.Parsing;
+
+using Lox.Scanning;
+
+using static Lox.Scanning.TokenKind;
+using static Lox.Parsing.Grammar;
 
 /// <summary>
 /// The Lox grammar, producing a full-fidelity concrete syntax tree (CST):
@@ -16,15 +21,15 @@ public static class LoxGrammar
         // ----- terminal helpers -----
         // Keywords are scanned as Identifier tokens; "<", ">", "=", "!" (and the
         // "="-suffixed forms) are scanned as Comparison tokens.
-        static GrammarRule Kw(string word) => Grammar.Expect(TokenKind.Identifier, word);
-        static GrammarRule Op(string symbol) => Grammar.Expect(TokenKind.Operator, symbol);
-        static GrammarRule Cmp(string symbol) => Grammar.Expect(TokenKind.Comparison, symbol);
-        static GrammarRule Br(string symbol) => Grammar.Expect(TokenKind.Bracket, symbol);
-        static GrammarRule Punct(string symbol) => Grammar.Expect(TokenKind.Punctuation, symbol);
+        static GrammarRule Kw(string word) => Grammar.Expect(TokenKind.IDENTIFIER, word);
+        // static GrammarRule Op(string symbol) => Grammar.Expect(TokenKind.PLUS, TokenKind.MINUS, TokenKind.STAR, TokenKind.SLASH);
+        // static GrammarRule Cmp(string symbol) => Grammar.Expect(TokenKind.LESS, TokenKind.LESS_EQUAL, TokenKind.GREATER, TokenKind.GREATER_EQUAL, TokenKind.EQUAL_EQUAL, TokenKind.BANG_EQUAL);
+        // static GrammarRule Br(string symbol) => Grammar.Expect(TokenKind.Bracket, symbol);
+        // static GrammarRule Punct(string symbol) => Grammar.Expect(TokenKind.Punctuation, symbol);
 
-        var identifier = Grammar.Expect(TokenKind.Identifier);
-        var number = Grammar.Expect(TokenKind.Number);
-        var quotedString = Grammar.Expect(TokenKind.QuotedString);
+        var identifier = Grammar.Expect(TokenKind.IDENTIFIER);
+        var number = Grammar.Expect(TokenKind.NUMBER);
+        var quotedString = Grammar.Expect(TokenKind.STRING);
 
         // ----- forward references, resolved via Lazy -----
         GrammarRule expression = null!;
@@ -42,7 +47,7 @@ public static class LoxGrammar
         // ----- expressions (bottom-up) -----
 
         // arguments      = expression ( "," expression )* ;
-        var arguments = Grammar.SeparatedBy("args", expressionRef, Punct(","));
+        var arguments = Grammar.SeparatedBy("args", expressionRef, Grammar.Expect(COMMA));
 
         // primary        = "true" | "false" | "nil" | "this"
         //                | NUMBER | STRING | IDENTIFIER
@@ -52,37 +57,37 @@ public static class LoxGrammar
             Kw("false"),
             Kw("nil"),
             Kw("this"),
-            Grammar.Seq("super", Kw("super"), Punct("."), identifier),
+            Grammar.Seq("super", Kw("super"), Grammar.Expect(DOT), identifier),
             number,
             quotedString,
             identifier,
-            Grammar.Seq("group", Br("("), expressionRef, Br(")")));
+            Grammar.Seq("group", Grammar.Expect(LEFT_PAREN), expressionRef, Grammar.Expect(RIGHT_PAREN)));
 
         // call           = primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
         var call = Grammar.Seq("call",
             primary,
             Grammar.ZeroOrMore(Grammar.Alt(
-                Grammar.Seq("invoke", Br("("), Grammar.Opt(arguments), Br(")")),
-                Grammar.Seq("member", Punct("."), identifier))));
+                Grammar.Seq("invoke", Expect(LEFT_PAREN), Grammar.Opt(arguments), Expect(RIGHT_PAREN)),
+                Grammar.Seq("member", Expect(DOT), identifier))));
 
         // unary          = ( "!" | "-" ) unary | call ;
         unary = Grammar.Alt(
-            Grammar.Seq("unary", Grammar.Alt(Cmp("!"), Op("-")), unaryRef),
+            Grammar.Seq("unary", Grammar.Alt(Expect(BANG), Expect(MINUS)), unaryRef),
             call);
 
         // factor         = unary ( ( "/" | "*" ) unary )* ;
-        var factor = Grammar.SeparatedBy("factor", unary, Grammar.Alt(Op("/"), Op("*")));
+        var factor = Grammar.SeparatedBy("factor", unary, Grammar.Alt(Expect(SLASH), Expect(STAR)));
 
         // term           = factor ( ( "-" | "+" ) factor )* ;
-        var term = Grammar.SeparatedBy("term", factor, Grammar.Alt(Op("-"), Op("+")));
+        var term = Grammar.SeparatedBy("term", factor, Grammar.Alt(Expect(MINUS), Expect(PLUS)));
 
         // comparison     = term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
         var comparison = Grammar.SeparatedBy("comparison", term,
-            Grammar.Alt(Cmp(">"), Cmp(">="), Cmp("<"), Cmp("<=")));
+            Grammar.Alt(Expect(GREATER), Expect(GREATER_EQUAL), Expect(LESS), Expect(LESS_EQUAL)));
 
         // equality       = comparison ( ( "!=" | "==" ) comparison )* ;
         var equality = Grammar.SeparatedBy("equality", comparison,
-            Grammar.Alt(Cmp("!="), Cmp("==")));
+            Grammar.Alt(Expect(EQUAL_EQUAL), Expect(BANG_EQUAL)));
 
         // logic_and      = equality ( "and" equality )* ;
         var logicAnd = Grammar.SeparatedBy("and", equality, Kw("and"));
@@ -94,7 +99,7 @@ public static class LoxGrammar
         // Implemented as logic_or ( "=" assignment )? because the greedy call rule
         // already consumes the "." IDENTIFIER chain of an assignment target.
         // Shape: (assign lhs (rhs = value)); collapses to lhs when no "=" follows.
-        assignment = Grammar.Seq("assign", logicOr, Grammar.Opt(Grammar.Seq("rhs", Cmp("="), assignmentRef)));
+        assignment = Grammar.Seq("assign", logicOr, Grammar.Opt(Grammar.Seq("rhs", Expect(EQUAL), assignmentRef)));
 
         // expression     = assignment ;
         expression = assignment;
@@ -102,38 +107,38 @@ public static class LoxGrammar
         // ----- statements -----
 
         // block          = "{" declaration* "}" ;
-        var block = Grammar.Seq("block", Br("{"), Grammar.ZeroOrMore(declarationRef), Br("}"));
+        var block = Grammar.Seq("block", Expect(LEFT_BRACE), Grammar.ZeroOrMore(declarationRef), Expect(RIGHT_BRACE));
 
         // exprStmt       = expression ";" ;
-        var exprStmt = Grammar.Seq("exprStmt", expression, Punct(";"));
+        var exprStmt = Grammar.Seq("exprStmt", expression, Expect(SEMICOLON));
 
         // printStmt      = "print" expression ";" ;
-        var printStmt = Grammar.Seq("print", Kw("print"), expression, Punct(";"));
+        var printStmt = Grammar.Seq("print", Kw("print"), expression, Expect(SEMICOLON));
 
         // returnStmt     = "return" expression? ";" ;
-        var returnStmt = Grammar.Seq("return", Kw("return"), Grammar.Opt(expression), Punct(";"));
+        var returnStmt = Grammar.Seq("return", Kw("return"), Grammar.Opt(expression), Expect(SEMICOLON));
 
         // whileStmt      = "while" "(" expression ")" statement ;
-        var whileStmt = Grammar.Seq("while", Kw("while"), Br("("), expression, Br(")"), statementRef);
+        var whileStmt = Grammar.Seq("while", Kw("while"), Expect(LEFT_PAREN), expression, Expect(RIGHT_PAREN), statementRef);
 
         // ifStmt         = "if" "(" expression ")" statement ( "else" statement )? ;
         var ifStmt = Grammar.Seq("if",
-            Kw("if"), Br("("), expression, Br(")"), statementRef,
+            Kw("if"), Expect(LEFT_PAREN), expression, Expect(RIGHT_PAREN), statementRef,
             Grammar.Opt(Grammar.Seq("else", Kw("else"), statementRef)));
 
         // varDecl        = "var" IDENTIFIER ( "=" expression )? ";" ;
         var varDecl = Grammar.Seq("var",
             Kw("var"), identifier,
-            Grammar.Opt(Grammar.Seq("init", Cmp("="), expression)),
-            Punct(";"));
+            Grammar.Opt(Grammar.Seq("init", Expect(EQUAL), expression)),
+            Expect(SEMICOLON));
 
         // forStmt        = "for" "(" ( varDecl | exprStmt | ";" )
         //                  expression? ";" expression? ")" statement ;
         var forStmt = Grammar.Seq("for",
-            Kw("for"), Br("("),
-            Grammar.Alt(varDecl, exprStmt, Punct(";")),
-            Grammar.Opt(expression), Punct(";"),
-            Grammar.Opt(expression), Br(")"),
+            Kw("for"), Expect(LEFT_PAREN),
+            Grammar.Alt(varDecl, exprStmt, Expect(SEMICOLON)),
+            Grammar.Opt(expression), Expect(SEMICOLON),
+            Grammar.Opt(expression), Expect(RIGHT_PAREN),
             statementRef);
 
         // statement      = exprStmt | forStmt | ifStmt | printStmt
@@ -145,19 +150,19 @@ public static class LoxGrammar
         // ----- declarations -----
 
         // parameters     = IDENTIFIER ( "," IDENTIFIER )* ;
-        var parameters = Grammar.SeparatedBy("params", identifier, Punct(","));
+        var parameters = Grammar.SeparatedBy("params", identifier, Expect(COMMA));
 
         // function       = IDENTIFIER "(" parameters? ")" block ;
-        var function = Grammar.Seq("function", identifier, Br("("), Grammar.Opt(parameters), Br(")"), block);
+        var function = Grammar.Seq("function", identifier, Expect(LEFT_PAREN), Grammar.Opt(parameters), Expect(RIGHT_PAREN), block);
 
         // funDecl        = "fun" function ;
-        var funDecl = Grammar.Seq("fun", Kw("fun"), function);
+        var funDecl = Grammar.Seq("fun", Kw("fun"), Expect(MINUS));
 
         // classDecl      = "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
         var classDecl = Grammar.Seq("class",
             Kw("class"), identifier,
-            Grammar.Opt(Grammar.Seq("extends", Cmp("<"), identifier)),
-            Br("{"), Grammar.ZeroOrMore(function), Br("}"));
+            Grammar.Opt(Grammar.Seq("extends", Expect(LESS), identifier)),
+            Expect(LEFT_BRACE), Grammar.ZeroOrMore(function), Expect(RIGHT_BRACE));
 
         // declaration    = classDecl | funDecl | varDecl | statement ;
         declaration = Grammar.Alt(classDecl, funDecl, varDecl, statement);
@@ -165,6 +170,6 @@ public static class LoxGrammar
         // program        = declaration* EOF ;
         // The EndOfInput token stays in the tree: it carries the file's trailing
         // whitespace as trivia, completing the exact source round-trip.
-        Program = Grammar.Seq("program", Grammar.ZeroOrMore(declaration), Grammar.Expect(TokenKind.EndOfInput));
+        Program = Grammar.Seq("program", Grammar.ZeroOrMore(declaration), Grammar.Expect(TokenKind.EOF));
     }
 }

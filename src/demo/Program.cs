@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using Lox;
 using Lox.Parsing;
+using Lox.Scanning;
 using Lox.Syntax;
 
 using Microsoft.Extensions.Logging;

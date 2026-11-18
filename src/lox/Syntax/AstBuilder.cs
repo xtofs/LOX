@@ -1,5 +1,7 @@
 namespace Lox.Syntax;
 
+using Lox.Scanning;
+
 /// <summary>
 /// Lowers the concrete syntax tree produced by <see cref="LoxGrammar"/> into the
 /// typed AST. This is where structure tokens (keywords, brackets, punctuation)
@@ -12,7 +14,7 @@ public class AstBuilder
         var builder = new AstBuilder(lineIndex);
 
         // An empty program collapses to the bare EndOfInput token.
-        if (cst is TokenNode { Kind: TokenKind.EndOfInput })
+        if (cst is TokenNode { Kind: TokenKind.EOF })
         {
             return new Program([]);
         }
@@ -74,9 +76,9 @@ public class AstBuilder
         {
             return token.Kind switch
             {
-                TokenKind.Number => new Expr.Literal(double.Parse(token.Value, System.Globalization.CultureInfo.InvariantCulture)) { Start = token.Start },
-                TokenKind.QuotedString => new Expr.Literal(token.Value[1..^1]) { Start = token.Start },
-                TokenKind.Identifier => token.Value switch
+                TokenKind.NUMBER => new Expr.Literal(double.Parse(token.Value, System.Globalization.CultureInfo.InvariantCulture)) { Start = token.Start },
+                TokenKind.STRING => new Expr.Literal(token.Value[1..^1]) { Start = token.Start },
+                TokenKind.IDENTIFIER => token.Value switch
                 {
                     "true" => new Expr.Literal(true) { Start = token.Start },
                     "false" => new Expr.Literal(false) { Start = token.Start },
@@ -114,11 +116,11 @@ public class AstBuilder
     private Stmt.For ToFor(IReadOnlyList<Node> c)
     {
         var i = 2;
-        Stmt? init = IsPunct(c[i], ";") ? null : ToStmt(c[i]);
+        Stmt? init = IsToken(c[i], TokenKind.SEMICOLON) ? null : ToStmt(c[i]);
         i++;
 
         Expr? cond = null;
-        if (!IsPunct(c[i], ";"))
+        if (!IsToken(c[i], TokenKind.SEMICOLON))
         {
             cond = ToExpr(c[i]);
             i++;
@@ -126,7 +128,7 @@ public class AstBuilder
         i++; // the ";" after the condition slot
 
         Expr? incr = null;
-        if (!IsBracket(c[i], ")"))
+        if (!IsToken(c[i], TokenKind.RIGHT_PAREN))
         {
             incr = ToExpr(c[i]);
             i++;
@@ -148,7 +150,7 @@ public class AstBuilder
             i++;
         }
         i++; // the "{"
-        var methods = IsBracket(c[i], "}")
+        var methods = IsToken(c[i], TokenKind.RIGHT_BRACE)
             ? []
             : Rep(c[i]).Select(ToFunction).ToList();
         return new Stmt.ClassDecl(name, superclass, methods);
@@ -166,11 +168,11 @@ public class AstBuilder
     // (params name , name …) — or a single identifier, or absent
     private List<(string, int)> ToParameters(Node node) => node switch
     {
-        TokenNode { Kind: TokenKind.Identifier } single => [(single.Value, single.Start)],
+        TokenNode { Kind: TokenKind.IDENTIFIER } single => [(single.Value, single.Start)],
         SequenceNode { Tag: "params" } list =>
             [.. list.Children
                 .OfType<TokenNode>()
-                .Where(static t => t.Kind == TokenKind.Identifier)
+                .Where(static t => t.Kind == TokenKind.IDENTIFIER)
                 .Select(static t => (t.Value, t.Start))],
         _ => throw new InvalidOperationException($"unexpected parameter list node"),
     };
@@ -207,7 +209,7 @@ public class AstBuilder
             return [];
         }
         return invoke[1] is SequenceNode { Tag: "args" } args
-            ? [.. args.Children.Where(static n => !IsPunct(n, ",")).Select(ToExpr)]
+            ? [.. args.Children.Where(static n => !IsToken(n, TokenKind.COMMA)).Select(ToExpr)]
             : [ToExpr(invoke[1])];
     }
 
@@ -223,11 +225,14 @@ public class AstBuilder
 
     private static TokenNode Token(Node node) => (TokenNode)node;
 
-    private static bool IsPunct(Node node, string value) =>
-        node is TokenNode { Kind: TokenKind.Punctuation } t && t.Value == value;
+    private static bool IsToken(Node node, TokenKind kind) => node is TokenNode n && n.Kind == kind;
 
-    private static bool IsBracket(Node node, string value) =>
-        node is TokenNode { Kind: TokenKind.Bracket } t && t.Value == value;
+    // [Obsolete("Use IsToken(node, TokenKind.<Punctuation>) instead")]
+    // private static bool IsPunct(Node node, string value) =>
+    //         node is TokenNode { Kind: TokenKind.Punctuation } t && t.Value == value;
+
+    // private static bool IsBracket(Node node, string value) =>
+    //     node is TokenNode { Kind: TokenKind.Bracket } t && t.Value == value;
 
     private static SequenceNode Sequence(Node node, string expectedTag)
     {
