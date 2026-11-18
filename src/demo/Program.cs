@@ -57,9 +57,13 @@ internal partial class Program
     {
         var fileName = fileInfo.GetRelativePath();
 
-        if (Parser.TryParse(fileName, out var program, out var lineIndex))
+        if (Parser.TryParse(fileName, out var program, out var lineIndex, out var error))
         {
             Console.WriteLine(AstFormatter.Format(program));
+        }
+        else
+        {
+            Console.Error.WriteLine($"{fileName}{error}");
         }
     }
 
@@ -67,9 +71,13 @@ internal partial class Program
     {
         var fileName = fileInfo.GetRelativePath();
 
-        if (Parser.TryParse(fileName, out var program, out var lineIndex))
+        if (Parser.TryParse(fileName, out var program, out var lineIndex, out var error))
         {
             Console.WriteLine(AstFormatter.Format(program));
+        }
+        else
+        {
+            Console.Error.WriteLine($"{fileName}{error}");
         }
     }
 
@@ -78,10 +86,14 @@ internal partial class Program
         var fileName = fileInfo.GetRelativePath();
         var logger = new Logger(level);
 
-        if (Parser.TryParse(fileName, out var program, out var lineIndex))
+        if (Parser.TryParse(fileName, out var program, out var lineIndex, out var error))
         {
             var interpreter = new Interpreter(logger, fileName, lineIndex);
             interpreter.Eval(program);
+        }
+        else
+        {
+            Console.Error.WriteLine($"{fileName}{error}");
         }
     }
 }

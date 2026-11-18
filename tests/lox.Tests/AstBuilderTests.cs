@@ -10,7 +10,8 @@ public class AstBuilderTests
         var scanner = new Scanner(source);
         var tokens = scanner.GetEnumerator();
         tokens.MoveNext();
-        Assert.True(LoxGrammar.Program(tokens, out var cst, out _), $"failed to parse: {source}");
+        var success = LoxGrammar.Program.TryParse(tokens, out var cst, out _, out var error);
+        Assert.True(success, $"failed to parse: {source.ReplaceControlCharacters()}{Environment.NewLine}{error}");
         return AstBuilder.ToProgram(cst!, scanner.LineIndex);
     }
 

@@ -9,7 +9,8 @@ public class CstRoundTripTests
         var scanner = new Scanner(source);
         var tokens = scanner.GetEnumerator();
         tokens.MoveNext();
-        Assert.True(LoxGrammar.Program(tokens, out var cst, out _), $"failed to parse: {source}");
+        var success = LoxGrammar.Program.TryParse(tokens, out var cst, out _, out var error);
+        Assert.True(success, $"failed to parse: {source.ReplaceControlCharacters()}{Environment.NewLine}{error}");
         return cst!;
     }
 
@@ -90,5 +91,143 @@ public class NegativeParseTests
     public void Invalid_programs_fail_to_parse(string source)
     {
         Assert.False(TryParse(source));
+    }
+}
+
+public class ParseDiagnosticsTests
+{
+    public static TheoryData<string, int, int, TokenKind, TokenKind> InvalidPrograms => new()
+    {
+        { "print 1", 1, 8, TokenKind.EOF, TokenKind.SEMICOLON },
+        { "print 1;\r\n  var x = ;", 2, 11, TokenKind.SEMICOLON, TokenKind.NUMBER },
+        { "f(a,);", 1, 5, TokenKind.RIGHT_PAREN, TokenKind.IDENTIFIER },
+        { "{ print 1;", 1, 11, TokenKind.EOF, TokenKind.RIGHT_BRACE },
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidPrograms))]
+    public void Reports_furthest_failure_after_backtracking(
+        string source, int line, int column, TokenKind actual, TokenKind expected)
+    {
+        var scanner = new Scanner(source);
+        var tokens = scanner.GetEnumerator();
+        tokens.MoveNext();
+
+        Assert.False(LoxGrammar.Program.TryParse(tokens, out var cst, out _, out var error));
+
+        Assert.Null(cst);
+        Assert.NotNull(error);
+        Assert.Equal((line, column), (error.Line, error.Column));
+        Assert.Equal(actual, error.Remaining[0].Kind);
+        Assert.Equal(error.Start, error.Remaining[0].Start);
+        Assert.Contains(new TokenExpectation(expected), error.Expected);
+        Assert.Equal(TokenKind.EOF, error.Remaining[^1].Kind);
+        Assert.StartsWith($"({line},{column}): expected ", error.ToString());
+    }
+
+    [Fact]
+    public void Combines_expectations_and_snapshots_current_token_without_changing_remainder()
+    {
+        var left = Grammar.Seq("left", Grammar.Expect(TokenKind.IDENTIFIER), Grammar.Expect(TokenKind.LEFT_PAREN));
+        var right = Grammar.Seq("right", Grammar.Expect(TokenKind.IDENTIFIER), Grammar.Expect(TokenKind.RIGHT_PAREN));
+        var rule = Grammar.Seq("program",
+            Grammar.ZeroOrMore(Grammar.Alt(left, right, left, left.Named("other"))), Grammar.Expect(TokenKind.EOF));
+        var scanner = new Scanner("f x;");
+        var tokens = scanner.GetEnumerator();
+        tokens.MoveNext();
+
+        Assert.False(rule.TryParse(tokens, out _, out var remaining, out var error));
+
+        Assert.NotNull(error);
+        Assert.Equal(0, remaining.Current.Start);
+        Assert.Equal(
+            [new TokenExpectation(TokenKind.LEFT_PAREN), new TokenExpectation(TokenKind.RIGHT_PAREN)],
+            error.Expected.OrderBy(static expectation => expectation.Kind));
+        Assert.Collection(error.Contexts,
+            context =>
+            {
+                Assert.Equal(new TokenExpectation(TokenKind.LEFT_PAREN), context.Expected);
+                Assert.Equal(["program", "left"], context.RulePath);
+            },
+            context =>
+            {
+                Assert.Equal(new TokenExpectation(TokenKind.RIGHT_PAREN), context.Expected);
+                Assert.Equal(["program", "right"], context.RulePath);
+            },
+            context =>
+            {
+                Assert.Equal(new TokenExpectation(TokenKind.LEFT_PAREN), context.Expected);
+                Assert.Equal(["program", "other", "left"], context.RulePath);
+            });
+        Assert.Equal(
+            [new ParseToken(TokenKind.IDENTIFIER, "x", 2),
+             new ParseToken(TokenKind.SEMICOLON, ";", 3),
+             new ParseToken(TokenKind.EOF, "", 4)],
+            error.Remaining);
+        Assert.Contains("found IDENTIFIER \"x\"", error.ToString());
+    }
+
+    public static TheoryData<string, TokenKind, string[]> RuleContexts => new()
+    {
+        { "(a,)", TokenKind.IDENTIFIER, ["root", "program", "group", "items"] },
+        { "print (", TokenKind.SEMICOLON, ["root", "program", "header"] },
+        { "print; (a) x", TokenKind.LEFT_PAREN, ["root", "program", "group"] },
+        { "print; (a) x", TokenKind.EOF, ["root", "program"] },
+    };
+
+    [Theory]
+    [MemberData(nameof(RuleContexts))]
+    public void Captures_named_rule_path_at_failure_without_leaking_completed_rules(
+        string source, TokenKind expected, string[] rulePath)
+    {
+        var header = Grammar.Seq("header", Grammar.Expect(TokenKind.PRINT), Grammar.Expect(TokenKind.SEMICOLON));
+        var items = Grammar.SeparatedBy("items", Grammar.Expect(TokenKind.IDENTIFIER), Grammar.Expect(TokenKind.COMMA));
+        var group = Grammar.Seq("group",
+            Grammar.Expect(TokenKind.LEFT_PAREN), Grammar.Opt(items), Grammar.Expect(TokenKind.RIGHT_PAREN));
+        var rule = Grammar.Seq("program",
+            Grammar.Opt(header), Grammar.ZeroOrMore(group), Grammar.Expect(TokenKind.EOF)).Named("root");
+        var scanner = new Scanner(source);
+        var tokens = scanner.GetEnumerator();
+        tokens.MoveNext();
+
+        Assert.False(rule.TryParse(tokens, out _, out _, out var error));
+
+        Assert.NotNull(error);
+        var context = Assert.Single(error.Contexts, context => context.Expected == new TokenExpectation(expected));
+        Assert.Equal(rulePath, context.RulePath);
+        Assert.Contains($"Context: {string.Join(" > ", rulePath)} (expected {expected})", error.ToString());
+    }
+
+    [Theory]
+    [InlineData("other")]
+    [InlineData("")]
+    public void Reports_expected_value_as_well_as_kind(string source)
+    {
+        var scanner = new Scanner(source);
+        var tokens = scanner.GetEnumerator();
+        tokens.MoveNext();
+        var rule = Grammar.Expect(TokenKind.IDENTIFIER, "wanted");
+
+        Assert.False(rule.TryParse(tokens, out _, out _, out var error));
+
+        Assert.NotNull(error);
+        Assert.Equal(new TokenExpectation(TokenKind.IDENTIFIER, "wanted"), Assert.Single(error.Expected));
+        Assert.Contains("expected IDENTIFIER \"wanted\"", error.ToString());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("print 1;")]
+    [InlineData("class C {}")]
+    public void Successful_parse_discards_speculative_failures(string source)
+    {
+        var scanner = new Scanner(source);
+        var tokens = scanner.GetEnumerator();
+        tokens.MoveNext();
+
+        Assert.True(LoxGrammar.Program.TryParse(tokens, out var cst, out _, out var error));
+
+        Assert.NotNull(cst);
+        Assert.Null(error);
     }
 }

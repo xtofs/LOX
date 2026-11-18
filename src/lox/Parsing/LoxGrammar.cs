@@ -21,7 +21,7 @@ public static class LoxGrammar
         // ----- terminal helpers -----
         // Keywords are scanned as Identifier tokens; "<", ">", "=", "!" (and the
         // "="-suffixed forms) are scanned as Comparison tokens.
-        static GrammarRule Kw(string word) => Grammar.Expect(TokenKind.IDENTIFIER, word);
+
         // static GrammarRule Op(string symbol) => Grammar.Expect(TokenKind.PLUS, TokenKind.MINUS, TokenKind.STAR, TokenKind.SLASH);
         // static GrammarRule Cmp(string symbol) => Grammar.Expect(TokenKind.LESS, TokenKind.LESS_EQUAL, TokenKind.GREATER, TokenKind.GREATER_EQUAL, TokenKind.EQUAL_EQUAL, TokenKind.BANG_EQUAL);
         // static GrammarRule Br(string symbol) => Grammar.Expect(TokenKind.Bracket, symbol);
@@ -53,11 +53,11 @@ public static class LoxGrammar
         //                | NUMBER | STRING | IDENTIFIER
         //                | "(" expression ")" | "super" "." IDENTIFIER ;
         var primary = Grammar.Alt(
-            Kw("true"),
-            Kw("false"),
-            Kw("nil"),
-            Kw("this"),
-            Grammar.Seq("super", Kw("super"), Grammar.Expect(DOT), identifier),
+            Expect(TRUE),
+            Expect(FALSE),
+            Expect(NIL),
+            Expect(THIS),
+            Grammar.Seq("super", Expect(SUPER), Grammar.Expect(DOT), identifier),
             number,
             quotedString,
             identifier,
@@ -90,10 +90,10 @@ public static class LoxGrammar
             Grammar.Alt(Expect(EQUAL_EQUAL), Expect(BANG_EQUAL)));
 
         // logic_and      = equality ( "and" equality )* ;
-        var logicAnd = Grammar.SeparatedBy("and", equality, Kw("and"));
+        var logicAnd = Grammar.SeparatedBy("and", equality, Expect(AND));
 
         // logic_or       = logic_and ( "or" logic_and )* ;
-        var logicOr = Grammar.SeparatedBy("or", logicAnd, Kw("or"));
+        var logicOr = Grammar.SeparatedBy("or", logicAnd, Expect(OR));
 
         // assignment     = ( call "." )? IDENTIFIER "=" assignment | logic_or ;
         // Implemented as logic_or ( "=" assignment )? because the greedy call rule
@@ -113,29 +113,29 @@ public static class LoxGrammar
         var exprStmt = Grammar.Seq("exprStmt", expression, Expect(SEMICOLON));
 
         // printStmt      = "print" expression ";" ;
-        var printStmt = Grammar.Seq("print", Kw("print"), expression, Expect(SEMICOLON));
+        var printStmt = Grammar.Seq("print", Expect(PRINT), expression, Expect(SEMICOLON));
 
         // returnStmt     = "return" expression? ";" ;
-        var returnStmt = Grammar.Seq("return", Kw("return"), Grammar.Opt(expression), Expect(SEMICOLON));
+        var returnStmt = Grammar.Seq("return", Expect(RETURN), Grammar.Opt(expression), Expect(SEMICOLON));
 
         // whileStmt      = "while" "(" expression ")" statement ;
-        var whileStmt = Grammar.Seq("while", Kw("while"), Expect(LEFT_PAREN), expression, Expect(RIGHT_PAREN), statementRef);
+        var whileStmt = Grammar.Seq("while", Expect(WHILE), Expect(LEFT_PAREN), expression, Expect(RIGHT_PAREN), statementRef);
 
         // ifStmt         = "if" "(" expression ")" statement ( "else" statement )? ;
         var ifStmt = Grammar.Seq("if",
-            Kw("if"), Expect(LEFT_PAREN), expression, Expect(RIGHT_PAREN), statementRef,
-            Grammar.Opt(Grammar.Seq("else", Kw("else"), statementRef)));
+            Expect(IF), Expect(LEFT_PAREN), expression, Expect(RIGHT_PAREN), statementRef,
+            Grammar.Opt(Grammar.Seq("else", Expect(ELSE), statementRef)));
 
         // varDecl        = "var" IDENTIFIER ( "=" expression )? ";" ;
         var varDecl = Grammar.Seq("var",
-            Kw("var"), identifier,
+            Expect(VAR), identifier,
             Grammar.Opt(Grammar.Seq("init", Expect(EQUAL), expression)),
             Expect(SEMICOLON));
 
         // forStmt        = "for" "(" ( varDecl | exprStmt | ";" )
         //                  expression? ";" expression? ")" statement ;
         var forStmt = Grammar.Seq("for",
-            Kw("for"), Expect(LEFT_PAREN),
+            Expect(FOR), Expect(LEFT_PAREN),
             Grammar.Alt(varDecl, exprStmt, Expect(SEMICOLON)),
             Grammar.Opt(expression), Expect(SEMICOLON),
             Grammar.Opt(expression), Expect(RIGHT_PAREN),
@@ -145,7 +145,7 @@ public static class LoxGrammar
         //                | returnStmt | whileStmt | block ;
         // Keyword-led statements are tried before exprStmt so that e.g. "print (x);"
         // parses as a print statement rather than a call to an identifier "print".
-        statement = Grammar.Alt(forStmt, ifStmt, printStmt, returnStmt, whileStmt, block, exprStmt);
+        statement = Grammar.Alt(forStmt, ifStmt, printStmt, returnStmt, whileStmt, block, exprStmt).Named("statement");
 
         // ----- declarations -----
 
@@ -156,16 +156,16 @@ public static class LoxGrammar
         var function = Grammar.Seq("function", identifier, Expect(LEFT_PAREN), Grammar.Opt(parameters), Expect(RIGHT_PAREN), block);
 
         // funDecl        = "fun" function ;
-        var funDecl = Grammar.Seq("fun", Kw("fun"), Expect(MINUS));
+        var funDecl = Grammar.Seq("fun", Expect(FUN), function);
 
         // classDecl      = "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
         var classDecl = Grammar.Seq("class",
-            Kw("class"), identifier,
+            Expect(CLASS), identifier,
             Grammar.Opt(Grammar.Seq("extends", Expect(LESS), identifier)),
             Expect(LEFT_BRACE), Grammar.ZeroOrMore(function), Expect(RIGHT_BRACE));
 
         // declaration    = classDecl | funDecl | varDecl | statement ;
-        declaration = Grammar.Alt(classDecl, funDecl, varDecl, statement);
+        declaration = Grammar.Alt(classDecl, funDecl, varDecl, statement).Named("declaration");
 
         // program        = declaration* EOF ;
         // The EndOfInput token stays in the tree: it carries the file's trailing

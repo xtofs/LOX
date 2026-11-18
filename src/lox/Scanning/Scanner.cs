@@ -70,6 +70,8 @@ public partial class Scanner(string source)
 
 public ref struct TokenEnumerator(ContiguousMatchEnumerator<TokenCategory> contiguousMatchEnumerator)
 {
+    internal readonly string Source => _contiguousMatchEnumerator.Source;
+
     private ContiguousMatchEnumerator<TokenCategory> _contiguousMatchEnumerator = contiguousMatchEnumerator;
     private int _triviaStart;
     private int _triviaLength;
@@ -94,6 +96,8 @@ public ref struct TokenEnumerator(ContiguousMatchEnumerator<TokenCategory> conti
         {
             TokenCategory.Comparison => value switch
             {
+                "=" => TokenKind.EQUAL,
+                "!" => TokenKind.BANG,
                 ">=" => TokenKind.GREATER_EQUAL,
                 ">" => TokenKind.GREATER,
                 "<=" => TokenKind.LESS_EQUAL,

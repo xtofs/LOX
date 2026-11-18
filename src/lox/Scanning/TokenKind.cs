@@ -1,6 +1,7 @@
 namespace Lox.Scanning;
 
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "TokenKind uses all caps naming convention")]
 public enum TokenKind
 {
     // Single-character tokens.
@@ -39,19 +40,6 @@ public enum TokenCategory
     QuotedString
 }
 
-// public enum TokenCategory
-// {
-//     EndOfInput,
-//     Whitespace,
-//     Comment,
-//     Number,
-//     Identifier,
-//     Comparison,
-//     Operator,
-//     Bracket,
-//     Punctuation,
-//     QuotedString
-// }
 
 public static class TokenKindExtensions
 {
